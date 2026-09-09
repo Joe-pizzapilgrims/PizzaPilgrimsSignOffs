@@ -1,0 +1,53 @@
+name: Update Supervisor safety Show & Tell
+
+on:
+  push:
+    paths:
+      - '.github/workflows/test-supervisor-safety-showtell.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update-supervisor-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Replace Supervisor safety Show & Tell tasks
+        shell: python
+        run: |
+          from pathlib import Path
+          import json, re
+
+          path = Path('Supervisor_Sign_Off_Interactive.html')
+          text = path.read_text(encoding='utf-8')
+
+          pattern = r'(<script id="sections-data" type="application/json">)(.*?)(</script>)'
+          match = re.search(pattern, text, flags=re.S)
+          if not match:
+              raise RuntimeError('sections-data JSON not found')
+
+          sections = json.loads(match.group(2))
+          safety = next((section for section in sections if section.get('id') == 'safety'), None)
+          if safety is None:
+              raise RuntimeError('Safety section not found')
+
+          safety['show'] = [
+              'In depth food audit walk around completed to satisfactory levels with all relevant issues identified and actioned'
+          ]
+
+          new_json = json.dumps(sections, ensure_ascii=False)
+          updated = text[:match.start(2)] + new_json + text[match.end(2):]
+          path.write_text(updated, encoding='utf-8')
+
+      - name: Commit Supervisor sign-off change
+        run: |
+          git config user.name "OpenAI ChatGPT"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Supervisor_Sign_Off_Interactive.html
+          git commit -m "Simplify Supervisor safety Show and Tell"
+          git push origin main

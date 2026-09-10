@@ -1,0 +1,45 @@
+name: Update Food Safety Wording
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/update-food-safety-wording.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Update UK sign-off wording
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          files = [
+            'Assistant_Manager_Sign_Off_Interactive.html',
+            'GM_Sign_Off_Interactive_v8.html',
+            'Head_Chef_Sign_Off_Interactive.html',
+            'Second_Chef_Sign_Off_Interactive.html',
+            'Senior_Chef_Sign_Off_Interactive.html',
+            'Supervisor_Sign_Off_Interactive.html',
+          ]
+          old = 'In-depth food audit walk-around completed to a satisfactory standard, with all relevant issues identified and actioned.'
+          new = 'In-depth food safety audit walk-around completed to a satisfactory standard, with all relevant issues identified and actioned.'
+          for filename in files:
+            p = Path(filename)
+            text = p.read_text(encoding='utf-8')
+            count = text.count(old)
+            if count != 1:
+              raise RuntimeError(f'{filename}: expected 1 match, found {count}')
+            p.write_text(text.replace(old, new), encoding='utf-8')
+            print(f'{filename}: updated')
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name "Joe-pizzapilgrims"
+          git config user.email "joe@pizzapilgrims.co.uk"
+          git add *_Sign_Off_Interactive*.html
+          git commit -m "Clarify food safety audit wording"
+          git push origin main

@@ -39,6 +39,18 @@ jobs:
               'guest': 'Trainee demonstrates they are an awesome shift leader, able to run shifts that are both fun and commercially successful.',
           }
 
+          def canonical_section(section):
+              sid = str(section.get('id', '')).lower()
+              title = str(section.get('title', '')).lower()
+              subtitle = str(section.get('subtitle', '')).lower()
+              combined = ' '.join([sid, title, subtitle])
+              if 'safety' in combined: return 'safety'
+              if 'guest' in combined or 'service' in combined: return 'guest'
+              if 'leader' in combined or 'management' in combined: return 'leadership'
+              if 'business' in combined or 'commercial' in combined: return 'business'
+              if 'pizza pilgrim' in combined or 'pilgrim' in sid or sid == 'pizza': return 'pizza'
+              return None
+
           beforeprint_js = '''\n<script>\nconst signOffPrintHeights = new Map();\nwindow.addEventListener('beforeprint', () => {\n  document.querySelectorAll('textarea').forEach(textarea => {\n    signOffPrintHeights.set(textarea, textarea.style.height);\n    textarea.style.height = 'auto';\n    textarea.style.height = `${textarea.scrollHeight}px`;\n    textarea.style.overflow = 'visible';\n  });\n});\nwindow.addEventListener('afterprint', () => {\n  document.querySelectorAll('textarea').forEach(textarea => {\n    textarea.style.height = signOffPrintHeights.get(textarea) || '';\n    textarea.style.overflow = '';\n  });\n  signOffPrintHeights.clear();\n});\n</script>\n'''
 
           for path in files:
@@ -52,10 +64,10 @@ jobs:
               sections = json.loads(match.group(2))
               seen = set()
               for section in sections:
-                  section_id = section.get('id')
-                  if section_id in show_tasks:
-                      section['show'] = [show_tasks[section_id]]
-                      seen.add(section_id)
+                  key = canonical_section(section)
+                  if key in show_tasks:
+                      section['show'] = [show_tasks[key]]
+                      seen.add(key)
 
               missing = set(show_tasks) - seen
               if missing:
@@ -64,7 +76,6 @@ jobs:
               encoded = json.dumps(sections, ensure_ascii=False)
               text = text[:match.start(2)] + encoded + text[match.end(2):]
 
-              # #13: expand assessor comment boxes to full content in print/PDF.
               if 'signOffPrintHeights' not in text:
                   text = text.replace('</body></html>', beforeprint_js + '</body></html>', 1)
 

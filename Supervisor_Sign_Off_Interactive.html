@@ -71,4 +71,23 @@ function submitSignOff(){
 }
 function resetAll(){if(confirm('Clear all saved answers from this browser?')){state={};localStorage.removeItem('signOffState_Supervisor');render();}}
 loadState();render();
-</script></body></html>
+</script>
+<script>
+const signOffPrintHeights = new Map();
+window.addEventListener('beforeprint', () => {
+  document.querySelectorAll('textarea').forEach(textarea => {
+    signOffPrintHeights.set(textarea, textarea.style.height);
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+    textarea.style.overflow = 'visible';
+  });
+});
+window.addEventListener('afterprint', () => {
+  document.querySelectorAll('textarea').forEach(textarea => {
+    textarea.style.height = signOffPrintHeights.get(textarea) || '';
+    textarea.style.overflow = '';
+  });
+  signOffPrintHeights.clear();
+});
+</script>
+</body></html>
